@@ -120,6 +120,11 @@ was the only one that worked, so couch Mac must be on the same WiFi network for 
 2. **Use `git stash` instead of `git checkout --` / `rm`**: the harness's auto-mode classifier
    blocked the direct discard as "Irreversible Local Destruction" even with explicit user
    confirmation; stash achieves the same visible result while staying recoverable.
+3. **Fork the upstream repo** (`gh repo fork --remote --remote-name=fork`) so future local
+   commits have somewhere of the user's own to push, instead of the upstream maintainer's repo.
+   `origin` still points at `bilawalsidhu/gods-eye-view` (for pulling upstream updates); the new
+   `fork` remote points at `theloniuser/gods-eye-view` (for pushing this project's own work).
+   Local `main` has **not** been pushed to `fork` yet — the fork exists on GitHub but is empty.
 
 ---
 
@@ -136,6 +141,8 @@ was the only one that worked, so couch Mac must be on the same WiFi network for 
       per-point cache, not the global one that was dropped).
 - [ ] Stop the still-running dev server (PID 54493) on Thelonius when done, or leave it — no
       longer blocking anything.
+- [ ] Push local `main` to the new `fork` remote (`theloniuser/gods-eye-view`) — not done yet,
+      fork is currently empty on GitHub.
 
 ---
 
