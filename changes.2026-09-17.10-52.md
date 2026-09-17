@@ -77,6 +77,40 @@ was the only one that worked, so couch Mac must be on the same WiFi network for 
 
 **Files Modified**: none (runtime/process only)
 
+### Issue: `git fetch origin` failed with "did not send all necessary objects"
+
+**Symptom**: `git fetch origin main` errored with `fatal: bad object refs/remotes/origin/CLAUDE.md`
+and `error: ... did not send all necessary objects`.
+
+**Root Cause**: `.git/refs/remotes/origin/CLAUDE.md` was a corrupted ref file — instead of a
+40-char SHA, it literally contained `<claude-mem-context>\n\n</claude-mem-context>`. Not
+something this session wrote; looks like a stray artifact from the claude-mem plugin writing
+into the wrong path at some earlier point. `git fsck` confirmed: `badRefContent` +
+`invalid sha1 pointer 0000...0000`.
+
+**Solution**: Deleted the bad ref file directly (`rm .git/refs/remotes/origin/CLAUDE.md`);
+`git fetch origin main` succeeded immediately after. Verified the earlier merge was unaffected —
+`git merge-base --is-ancestor 0d41b6b HEAD` confirmed the merge commit's second parent was
+exactly upstream's correct tip, since a prior successful fetch this session had already set
+`refs/remotes/origin/main` correctly before the corrupted ref started blocking new fetches.
+
+**Files Modified**: `.git/refs/remotes/origin/CLAUDE.md` (deleted — not a tracked project file)
+
+### Issue: `npm test` had 3 failures immediately after merging upstream
+
+**Symptom**: `src/qaVesselCardsHarness.test.mjs`, `src/tooling/format.test.mjs`, and
+`src/tooling/importDirections.test.mjs` failed with `ERR_MODULE_NOT_FOUND: prettier` (or
+equivalent) after the merge.
+
+**Root Cause**: `node_modules` was stale — the 396-commit merge changed `package.json`
+devDependencies (added `prettier`, bumped `puppeteer` and `sharp`) but nothing had reinstalled.
+
+**Solution**: `npm install`, then updated the local `allowScripts` version pins to match what
+actually got installed (`puppeteer@24.37.5` → `25.10.0`, `sharp@0.34.5` → `0.35.4`; `esbuild` and
+`fsevents` unchanged). Re-ran the full suite: 4144 pass / 0 fail / 1 skipped.
+
+**Files Modified**: `package.json:246-251` (commit `0473089`)
+
 ---
 
 ## Running State
@@ -124,7 +158,13 @@ was the only one that worked, so couch Mac must be on the same WiFi network for 
    commits have somewhere of the user's own to push, instead of the upstream maintainer's repo.
    `origin` still points at `bilawalsidhu/gods-eye-view` (for pulling upstream updates); the new
    `fork` remote points at `theloniuser/gods-eye-view` (for pushing this project's own work).
-   Local `main` has **not** been pushed to `fork` yet — the fork exists on GitHub but is empty.
+4. **Merged the 396 upstream commits into local `main`** (`git merge origin/main`, commit
+   `104d4f3`), then pushed the result to `fork` (`0d41b6b..0473089`, fast-forward). User confirmed
+   wanting the fork up to date rather than leaving it stale. No merge conflicts in the code itself
+   — the only conflict was the local-only `package.json` `allowScripts` block against upstream's
+   `package.json` changes, resolved by keeping both blocks (`1e81747`). Verified with
+   `npm install` + full test suite (4144 pass / 0 fail) before pushing — see Issues Encountered
+   for the two problems hit along the way (corrupted git ref, stale `node_modules`).
 
 ---
 
@@ -141,8 +181,12 @@ was the only one that worked, so couch Mac must be on the same WiFi network for 
       per-point cache, not the global one that was dropped).
 - [ ] Stop the still-running dev server (PID 54493) on Thelonius when done, or leave it — no
       longer blocking anything.
-- [ ] Push local `main` to the new `fork` remote (`theloniuser/gods-eye-view`) — not done yet,
-      fork is currently empty on GitHub.
+- [x] Push local `main` to the new `fork` remote — done (`0d41b6b..0473089`, fast-forward,
+      includes the 396-commit upstream merge, all local doc/config commits, full green test run).
+- [ ] Consider deleting the now-superseded `docs/session-changelog-2026-09-17` branch on the
+      fork (its 2 commits are already part of `main` via the merge).
+- [ ] Report the corrupted `.git/refs/remotes/origin/CLAUDE.md` artifact as a claude-mem plugin
+      bug — not yet filed.
 
 ---
 
