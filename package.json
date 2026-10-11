@@ -275,6 +275,6 @@
     "esbuild@0.25.12": true,
     "fsevents@2.3.3": true,
     "puppeteer@25.10.0": true,
-    "sharp@0.35.4": true
+    "sharp@0.35.5": true
   }
 }
